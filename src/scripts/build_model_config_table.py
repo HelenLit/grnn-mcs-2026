@@ -124,9 +124,11 @@ def _grnn_row(config: dict, label: str, aggregation: str) -> dict[str, str]:
             f"Kernel width sigma in [{sigma_low}, {sigma_high}] (single free "
             f"parameter). Lag order L = {preparation['lag_order']}. "
             + (
-                f"Ensemble size M in {{{', '.join(str(value) for value in m_values)}}}."
-                if aggregation != "single"
-                else "No ensemble."
+                "No ensemble."
+                if aggregation == "single"
+                else f"Ensemble size M = {m_values[0]} (fixed)."
+                if len(m_values) == 1
+                else f"Ensemble size M in {{{', '.join(str(value) for value in m_values)}}}."
             )
         ),
         "Selection procedure": (
@@ -140,10 +142,13 @@ def _grnn_row(config: dict, label: str, aggregation: str) -> dict[str, str]:
             f"лише за fit-частиною, щоб валідаційні вікна не впливали на "
             f"перетворення, яке їх оцінює. "
             + (
-                "Кількість базових мереж M обирали на тому самому фрагменті "
-                "за критерієм RMSE."
-                if aggregation != "single"
-                else ""
+                ""
+                if aggregation == "single"
+                else "Кількість базових мереж M зафіксовано за результатами "
+                     "аналізу чутливості L × M (не підбирається на ряді)."
+                if len(m_values) == 1
+                else "Кількість базових мереж M обирали на тому самому фрагменті "
+                     "за критерієм RMSE."
             )
         ),
         "Preprocessing": (

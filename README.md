@@ -75,11 +75,11 @@ The GRNN family, all 23,000 Yearly series, with first differencing
 | Model | OWA | sMAPE | MASE |
 |---|---|---|---|
 | GRNN (single) | 0.824 | 14.35 | 3.06 |
-| GRNN-Mean | 0.816 | 14.17 | 3.05 |
-| GRNN-Median | 0.822 | 14.29 | 3.06 |
+| GRNN-Mean | 0.807 | 13.99 | 3.01 |
+| GRNN-Median | 0.806 | 13.94 | 3.02 |
 | GRNN-Bag | 0.819 | 14.24 | 3.05 |
 
-Without differencing the family degrades to OWA 1.27–1.39 — the differencing
+Without differencing the family degrades to OWA 1.27–1.62 — the differencing
 variant is reported by the pipeline in the same tables.
 
 ## Repository layout

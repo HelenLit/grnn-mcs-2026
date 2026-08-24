@@ -26,7 +26,10 @@ grnn:
 # (src/models/grnn_ensemble_robust.py)
 # ---------------------------------------------------------------------------
 ensemble_robust:
-  M_values: [3, 5, 7]    # number of base GRNNs to sweep over
+  M_values: [6]          # fixed by the L x M sensitivity grid (run_lag_m_ablation):
+                         # L=3, M=6 is the best cell on all 23,000 series; per-series
+                         # M selection from a candidate list was worse — selection
+                         # noise on the short validation split outweighs adaptivity
   sigma_min: 0.1
   sigma_max: 10.0
   sigma_step: 0.1
@@ -35,7 +38,7 @@ ensemble_robust:
 # Mean-aggregated GRNN ensemble baseline  (src/models/grnn_ensemble_avg.py)
 # ---------------------------------------------------------------------------
 ensemble_avg:
-  M_values: [3, 5, 7]
+  M_values: [6]          # same cell as ensemble_robust (see above)
   sigma_min: 0.1
   sigma_max: 10.0
   sigma_step: 0.1
