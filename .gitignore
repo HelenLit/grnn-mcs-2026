@@ -1,0 +1,20 @@
+# downloaded / generated data
+data/*
+!data/anchors/
+
+# generated outputs
+reports/
+plots/
+*.png
+
+# python
+__pycache__/
+*.pyc
+.venv/
+
+# docs: only the README is tracked
+*.md
+!README.md
+
+# local tooling
+.DS_Store

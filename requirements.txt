@@ -1,0 +1,17 @@
+# --- Core Generation & Sequence Preprocessing ---
+numpy==2.4.6
+scipy==1.18.0
+pandas==3.0.0
+
+# --- Core GRNN Lazy Learning Estimator ---
+pyGRNN==0.1.2
+
+# --- Baselines, Statistical Modeling & Metrics ---
+scikit-learn==1.9.0
+statsmodels==0.14.6
+
+# --- Visualization & Diagnostics ---
+matplotlib==3.11.0
+seaborn==0.13.2
+
+PyYAML==6.0.2

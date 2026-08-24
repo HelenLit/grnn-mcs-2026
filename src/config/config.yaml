@@ -1,0 +1,123 @@
+# GRNN M4 benchmark — hyperparameter configuration.
+# All tuneable values live here.
+# Load with PyYAML: yaml.safe_load(open("src/config/config.yaml"))
+
+# ---------------------------------------------------------------------------
+# Data preparation  (src/data/preparation.py)
+# ---------------------------------------------------------------------------
+preparation:
+  lag_order: 3            # number of past values used as input features
+  test_size: 0.2          # fraction of samples held out for testing
+  scaler: MaxAbsScaler    # options: MaxAbsScaler | MinMaxScaler | StandardScaler
+  difference: true        # first-difference before windowing (global default).
+                          # The M4 pipeline ignores this default and explicitly
+                          # runs both off/on variants.
+
+# ---------------------------------------------------------------------------
+# Single GRNN  (src/models/grnn.py)
+# ---------------------------------------------------------------------------
+grnn:
+  sigma_min: 0.1          # grid search lower bound
+  sigma_max: 10.0         # grid search upper bound
+  sigma_step: 0.1         # grid search step size
+
+# ---------------------------------------------------------------------------
+# Median-aggregated GRNN ensemble — the developed method
+# (src/models/grnn_ensemble_robust.py)
+# ---------------------------------------------------------------------------
+ensemble_robust:
+  M_values: [3, 5, 7]    # number of base GRNNs to sweep over
+  sigma_min: 0.1
+  sigma_max: 10.0
+  sigma_step: 0.1
+
+# ---------------------------------------------------------------------------
+# Mean-aggregated GRNN ensemble baseline  (src/models/grnn_ensemble_avg.py)
+# ---------------------------------------------------------------------------
+ensemble_avg:
+  M_values: [3, 5, 7]
+  sigma_min: 0.1
+  sigma_max: 10.0
+  sigma_step: 0.1
+
+# ---------------------------------------------------------------------------
+# Bagging GRNN baseline  (src/models/grnn_bagging.py)
+# ---------------------------------------------------------------------------
+ensemble_bagging:
+  M_values: [3, 5, 7]
+  sigma_min: 0.1
+  sigma_max: 10.0
+  sigma_step: 0.1
+  random_seed: 42
+
+# ---------------------------------------------------------------------------
+# Baseline models  (src/models/baselines.py)
+# ---------------------------------------------------------------------------
+baselines:
+  svr:
+    kernel: rbf             # fixed — not part of the tuned grid
+    C: 1.0                  # fallback default, used only if tuning is bypassed
+    epsilon: 0.1
+    gamma: scale
+    tuning:                 # validation-selected on the same split as GRNN sigma
+      C_values: [0.1, 1.0, 10.0, 100.0]
+      gamma_values: [scale, auto, 0.01, 0.1, 1.0]
+      epsilon_values: [0.01, 0.1, 0.5]
+
+  mlp:
+    hidden_layer_sizes: [50, 25]   # fallback default
+    max_iter: 5000
+    random_state: 42
+    alpha: 0.0001                  # fallback default (sklearn default)
+    early_stopping: true
+    tuning:                        # validation-selected on the same split as GRNN sigma
+      hidden_layer_sizes_grid: [[20], [50, 25], [100], [100, 50]]
+      alpha_values: [0.0001, 0.001, 0.01, 0.1]
+
+  arima:
+    order: [1, 0, 1]      # (p, d, q) — fallback default
+    tuning:               # selected by in-sample AIC (no held-out split needed)
+      order_grid:
+        - [0, 0, 0]
+        - [1, 0, 0]
+        - [0, 0, 1]
+        - [1, 0, 1]
+        - [2, 0, 1]
+        - [1, 0, 2]
+        - [2, 0, 2]
+        - [1, 1, 1]
+        - [2, 1, 1]
+
+# ---------------------------------------------------------------------------
+# Evaluation / comparison  (src/evaluation/comparison.py, src/scripts/*.py)
+# ---------------------------------------------------------------------------
+evaluation:
+  validation_size: 0.2
+  sigma_search: brent     # Selected from a comparison of all five optimizers on the
+                          #   full 23,000 Yearly series in the DEPLOYMENT feature
+                          #   space: brent was most accurate in most model/domain
+                          #   cells and cheaper per selection than grid; gradient was
+                          #   the slowest for the median ensemble without winning on
+                          #   accuracy (see src/scripts/compare_sigma_optimizers.py).
+                          # Options: 'grid' (exhaustive over sigma_min..max by sigma_step),
+                          #   'gradient' (multi-start L-BFGS-B, analytic dMSE/dsigma),
+                          #   'brent' / 'coarse2fine' (derivative-free, bounds only),
+                          #   'silverman' (closed-form plug-in, no objective evaluations).
+                          # For every mode except 'grid', sigma_step is ignored and
+                          #   sigma_min/max act as bounds.
+
+# ---------------------------------------------------------------------------
+# Real-data benchmark — M4 Yearly  (src/data/m4.py, src/evaluation/m4_metrics.py)
+# ---------------------------------------------------------------------------
+realdata:
+  m4_yearly:
+    horizon: 6              # official M4-Yearly horizon
+    mase_m: 1               # MASE seasonality for Yearly
+    random_seed: 42         # seed for series sampling (reproducible ID lists)
+    ao_z_threshold: 3.0     # |z| of differenced train series above which a point is AO-flagged
+    # Official published Yearly anchors (M4 GitHub "Evaluation and Ranks.xlsx",
+    # Point Forecasts-Frequency sheet; Naive2 Yearly row). Used to validate our
+    # sMAPE/MASE implementation and as the OWA denominator for leaderboard comparison.
+    naive2_published:
+      smape: 16.342
+      mase: 3.974
