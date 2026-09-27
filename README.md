@@ -16,44 +16,125 @@ scored with the same metric code as the GRNN runs. The metric code itself is
 gate-checked: the pipeline recomputes each submission's OWA and stops if the
 result does not match the published competition values.
 
-## Requirements
+## Prerequisites & Environment Setup
 
-- Python 3.12 (a virtualenv is created automatically; dependencies are pinned
-  in `requirements.txt`)
-- ~250 MB of downloads: the M4 Yearly dataset (~30 MB) and six official
-  forecast submissions (~214 MB)
-- A rar extractor for the submission archives (`unar`, `unrar`, `7z`, or
-  `bsdtar`; on macOS `brew install unar`)
+### 1. System Dependencies
+- **Python 3.12** is recommended.
+- A RAR extractor is required to unpack the official M4 forecast submissions (`unar`, `unrar`, `7z`, or `bsdtar`):
+  - **macOS**: `brew install unar`
+  - **Ubuntu / Debian**: `sudo apt-get update && sudo apt-get install -y unar`
+- Disk space: ~250 MB for downloaded data (M4 Yearly dataset ~30 MB, official competition submissions ~214 MB).
 
-## How to reproduce
+### 2. Environment Installation
 
-```
-./reproduce.sh --quick
-```
+Clone the repository and install the dependencies:
 
-Sets up the environment, downloads all inputs, validates the 23,000-series
-dataset, and runs the anchor gate — the recomputed OWA of every official
-submission is checked against the published competition values. Takes minutes
-(plus download time) and proves the evaluation code end to end.
-
-```
-./reproduce.sh
+```bash
+git clone https://github.com/HelenLit/grnn-mcs-2026.git
+cd grnn-mcs-2026
 ```
 
-Everything above, then the full GRNN family on all 23,000 series (both with
-and without first differencing), the comparison tables, stratified analyses
-(horizon, length, anomaly level), significance tests, robustness analysis and
-plots. About 1–1.5 hours after the downloads.
+Choose one of the following environment options:
 
+#### Option A: Using Conda (e.g. `grnn_env`)
+```bash
+conda create -n grnn_env python=3.12 -y
+conda activate grnn_env
+pip install --upgrade pip
+pip install -r requirements.txt
 ```
-./reproduce.sh --with-ablation
+
+#### Option B: Using standard Python `venv`
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate    # On Windows: .venv\Scripts\activate
+pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
-Adds the L×M sensitivity grid (lag order × ensemble size). This is the long
-tail — several hours.
+*(Note: The automated `./reproduce.sh` script will automatically create and use `.venv` if run directly without an active environment).*
 
-The script is idempotent: re-running it skips every step whose output already
-exists.
+---
+
+## Reproducibility Pipeline
+
+The benchmark can be reproduced either via the automated script or step-by-step manually. The pipeline is **idempotent**: re-running skips stages whose output files already exist.
+
+### Method 1: Automated Reproduction (`reproduce.sh`)
+
+- **Quick validation & anchor gate check** (~minutes):
+  Downloads inputs, validates the 23,000-series dataset, and verifies the metric calculation against published M4 competition scores:
+  ```bash
+  ./reproduce.sh --quick
+  ```
+
+- **Full benchmark reproduction** (~1–1.5 hours):
+  Runs dataset validation, anchor checks, the full GRNN family across all 23,000 series (with and without first differencing), comparison tables, stratified evaluations (horizon, length, anomaly level), statistical tests, robustness analysis, and plots:
+  ```bash
+  ./reproduce.sh
+  ```
+
+- **Full reproduction + Sensitivity Ablation Grid** (several hours):
+  Executes the complete benchmark plus the $L \times M$ (lag order $\times$ ensemble size) ablation grid:
+  ```bash
+  ./reproduce.sh --with-ablation
+  ```
+
+### Method 2: Step-by-Step Manual Execution
+
+If you prefer executing each stage of the research pipeline individually:
+
+1. **Download raw M4 Yearly dataset**:
+   ```bash
+   mkdir -p data/raw/m4/Train data/raw/m4/Test
+   curl -fL --retry 3 -o data/raw/m4/Train/Yearly-train.csv https://raw.githubusercontent.com/Mcompetitions/M4-methods/master/Dataset/Train/Yearly-train.csv
+   curl -fL --retry 3 -o data/raw/m4/Test/Yearly-test.csv   https://raw.githubusercontent.com/Mcompetitions/M4-methods/master/Dataset/Test/Yearly-test.csv
+   curl -fL --retry 3 -o data/raw/m4/M4-info.csv            https://raw.githubusercontent.com/Mcompetitions/M4-methods/master/Dataset/M4-info.csv
+   ```
+
+2. **Sync official submissions, validate dataset integrity & check anchor gate**:
+   ```bash
+   python -m src.scripts.run_m4_pipeline --tag main --stages sync,validate,anchors
+   ```
+
+3. **Train and evaluate the GRNN family on all 23,000 series**:
+   ```bash
+   python -m src.scripts.run_m4_pipeline --tag main --stages grnn,table,strat,plots --full --differencing both
+   ```
+
+4. **Run robustness analysis and generate derived benchmark reports**:
+   ```bash
+   python -m src.scripts.run_robustness_analysis --tag main
+   python -m src.scripts.build_length_table main
+   python -m src.scripts.build_model_config_table
+   python -m src.scripts.build_benchmark_report --tag main
+   ```
+
+5. *(Optional)* **Run $L \times M$ sensitivity grid ablation**:
+   ```bash
+   python -m src.scripts.run_lag_m_ablation --tag ablation --scope extended --differencing both
+   ```
+
+Outputs are saved under `reports/final/`, `reports/tables/`, and `plots/m4/`.
+
+---
+
+## Interactive demo UI
+
+A local Streamlit application for running the GRNN ensembles interactively —
+on the built-in M4 Yearly data or on an uploaded CSV series — with EDA
+statistics, forecast plots, quality metrics (sMAPE, MASE, OWA, MAE, RMSE) and
+a downloadable results package:
+
+```bash
+streamlit run src/ui/app.py
+```
+
+The UI reuses the pipeline code unchanged; it computes nothing of its own. It
+expects the M4 Yearly files under `data/raw/m4/` (offered for download on
+first launch if missing; `./reproduce.sh --quick` also fetches them). An
+example upload file ships at `data/synthetic/sinusoid_noise/sinusoid_noise.csv`.
+UI language is Ukrainian.
 
 ## Expected results
 
@@ -98,6 +179,9 @@ src/scripts/run_lag_m_ablation.py       L×M sensitivity grid
 src/scripts/run_robustness_analysis.py  large-error (exceedance) analysis
 src/scripts/compare_sigma_optimizers.py sigma-optimizer comparison
 src/scripts/build_*.py                  derived tables and the final report
+src/ui/                          interactive Streamlit demo (app.py entry)
+.streamlit/config.toml           UI theme
+data/synthetic/                  example series for the UI upload button
 reports/, plots/                 generated outputs (not tracked)
 ```
 

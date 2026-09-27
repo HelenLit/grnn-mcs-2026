@@ -15,3 +15,6 @@ matplotlib==3.11.0
 seaborn==0.13.2
 
 PyYAML==6.0.2
+
+# --- Interactive demo UI ---
+streamlit==1.62.0

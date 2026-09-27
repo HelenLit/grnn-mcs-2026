@@ -1,6 +1,7 @@
 # downloaded / generated data
 data/*
 !data/anchors/
+!data/synthetic/
 
 # generated outputs
 reports/
@@ -18,3 +19,4 @@ __pycache__/
 
 # local tooling
 .DS_Store
+.idea/
